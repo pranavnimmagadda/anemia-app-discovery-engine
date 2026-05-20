@@ -121,7 +121,7 @@ with st.sidebar.form("ingest_form", clear_on_submit=True):
     new_desc = st.text_area("Scope Description", placeholder="Paste submission requirements, evaluation criteria, or target objectives here...")
     new_art = st.multiselect("Required Submission Artifacts", ["Technical Abstract", "5-Min Pitch Deck", "Video Demo", "Budget Breakdown", "Clinical Feasibility Study", "Proof of Concept Data"])
     
-    submit_btn = st.form_submit_with_button("Run Analysis Pipeline")
+    submit_btn = st.form_submit_button("Run Analysis Pipeline")
 
 if submit_btn and new_name and new_desc:
     calc_score = calculate_alignment_score(new_name, new_desc)
