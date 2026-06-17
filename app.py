@@ -48,7 +48,7 @@ def calculate_alignment_score(title, description):
 # 2. SEED + LIVE GOOGLE SHEETS DATA STREAM CONNECTION
 # ----------------------------------------------------
 # Using GViz API endpoint to eliminate HTTP 404 permission blocks
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1S8ZOLFhqDFJoEcQAEzkeff14pCP2T6AES3JRsZQ0PvM/gviz/tq?tqx=out:csv"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkJKOYThlFleH4kIlEmRLrIWXg1gKZZQr2nT7yY8Bi2zKGOKTm5TxPsJlYXwN-u5X_am8gjGxA_q__/pub?gid=0&single=true&output=csv"
 
 if 'opportunities' not in st.session_state:
     preset_data = [
