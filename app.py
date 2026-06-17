@@ -19,20 +19,20 @@ def calculate_alignment_score(title, description):
     text = f"{title} {description}".lower()
     score = 0
     
-    # Tier 1 (Weight: +3) - Core Anemia & Microvascular Tissue Tracking
+    # Tier 1 (Weight: +3) - Core Anemia & Microvascular Tissue Tracking (Root terms)
     tier1_critical = [
         "non-invasive", "hemoglobin", "anemia", "palpebral", "conjunctiva", 
-        "pallor", "point-of-care", "triage", "maternal health", "screening tool"
+        "pallor", "point-of-care", "triage", "maternal", "screening", "diagnostic"
     ]
     # Tier 2 (Weight: +2) - CV Architecture & Smartphone Artifacts
     tier2_technical = [
-        "computer vision", "deep learning", "efficientnet", "segmentation mask", 
-        "image processing", "opencv", "glare", "specular reflection", 
-        "camera calibration", "gaze tracking", "mhealth", "low-resource settings"
+        "vision", "deep learning", "efficientnet", "segmentation", 
+        "image processing", "opencv", "glare", "reflection", 
+        "calibration", "gaze", "mhealth", "resource-constrained"
     ]
     # Tier 3 (Weight: +1) - Broad Market & Impact Areas
     tier3_broad = [
-        "digital health", "medtech", "diagnostics", "health equity", "biomanufacturing"
+        "digital health", "medtech", "health equity", "healthcare", "biotech"
     ]
     
     for word in tier1_critical:
@@ -47,8 +47,8 @@ def calculate_alignment_score(title, description):
 # ----------------------------------------------------
 # 2. SEED + LIVE GOOGLE SHEETS DATA STREAM CONNECTION
 # ----------------------------------------------------
-# Your live converted Google Sheet CSV stream URL
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1S8ZOLFhqDFJoEcQAEzkeff14pCP2T6AES3JRsZQ0PvM/export?format=csv"
+# Using GViz API endpoint to eliminate HTTP 404 permission blocks
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1S8ZOLFhqDFJoEcQAEzkeff14pCP2T6AES3JRsZQ0PvM/gviz/tq?tqx=out:csv"
 
 if 'opportunities' not in st.session_state:
     preset_data = [
@@ -101,23 +101,20 @@ if 'opportunities' not in st.session_state:
     # Stream and integrate live items from Make.com spreadsheet rows
     try:
         sheet_df = pd.read_csv(SHEET_URL)
-        sheet_df.columns = sheet_df.columns.str.strip() # Clear whitespaces
+        sheet_df.columns = sheet_df.columns.str.strip()
         
         for idx, row in sheet_df.iterrows():
             name_str = str(row.get('Name', '')).strip()
             desc_str = str(row.get('Description', '')).strip()
             
-            # Skip empty rows or duplicate presets
-            if not name_str or name_str in [o['name'] for o in preset_data]:
+            if not name_str or name_str == 'nan' or name_str in [o['name'] for o in preset_data]:
                 continue
                 
-            # Parse dates safely into python datetime.date format
             try:
                 raw_deadline = pd.to_datetime(row.get('Deadline')).date()
             except:
                 raw_deadline = datetime.date.today() + datetime.timedelta(days=30)
             
-            # Map deliverables string into python lists safely
             artifacts_str = row.get('Required Deliverables', 'TBD')
             artifacts_list = [a.strip() for a in str(artifacts_str).split(',')] if pd.notna(artifacts_str) else ["TBD"]
             
@@ -134,7 +131,7 @@ if 'opportunities' not in st.session_state:
                 "score": calculate_alignment_score(name_str, desc_str)
             })
     except Exception as e:
-        st.sidebar.error(f"Live Ingestion Offline: Verify sharing permissions. Error: {e}")
+        st.sidebar.error(f"Live Ingestion Offline: Check access settings. Error: {e}")
 
     st.session_state.opportunities = preset_data
 
@@ -183,7 +180,6 @@ if submit_btn and new_name and new_desc:
     st.sidebar.success(f"Opportunity Evaluated! Triage Score: {calc_score}/10")
     st.rerun()
 
-# Hard-reset pipeline option for clearing out local memory cache
 if st.sidebar.button("🔄 Clear App Cache & Force Google Sheet Sync"):
     del st.session_state.opportunities
     st.rerun()
@@ -241,7 +237,7 @@ with tab1:
 PROJECT APPLICATION PROFILE: {selected_opp['name']}
 CORE ARCHITECTURE TARGET: Non-Invasive AI Hemoglobin Estimation via Automated Palpebral Conjunctiva Segmentation
 
-EXECUTIVE SUMMARY & DISRUPTION PROPOSAL:
+EXECUTIVE SUMMARY & DISPOSAL PROPOSAL:
 Nutritional anemia represents a critical public health vector, directly compounding maternal and pediatric risk profiles in lower-and-middle-income countries (LMICs). Standard diagnosis requires invasive blood draws, specialized technicians, cold-chain infrastructure, and expensive consumable reagents. 
 
 We propose an engineering-led software alternative: a smartphone-based point-of-care tool designed to deliver high-precision triage at zero incremental cost per use. Built upon a native Python and OpenCV stack, our technology utilizes an EfficientNet B3 neural network architecture optimized to automatically generate structural segmentation masks of the palpebral conjunctiva. By analyzing sub-surface tissue color distribution metrics and localized microvascular pallor indices, the software computes rapid hemoglobin estimations.
