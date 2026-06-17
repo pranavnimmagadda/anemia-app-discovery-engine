@@ -45,8 +45,11 @@ def calculate_alignment_score(title, description):
     return min(score, 10)
 
 # ----------------------------------------------------
-# 2. SEED DATA: LIVE 2026 TOP-TIER OPPORTUNITIES
+# 2. SEED + LIVE GOOGLE SHEETS DATA STREAM CONNECTION
 # ----------------------------------------------------
+# Your live converted Google Sheet CSV stream URL
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1S8ZOLFhqDFJoEcQAEzkeff14pCP2T6AES3JRsZQ0PvM/export?format=csv"
+
 if 'opportunities' not in st.session_state:
     preset_data = [
         {
@@ -91,8 +94,48 @@ if 'opportunities' not in st.session_state:
         }
     ]
     
+    # Calculate scores for baseline seeds
     for item in preset_data:
         item["score"] = calculate_alignment_score(item["name"], item["description"])
+    
+    # Stream and integrate live items from Make.com spreadsheet rows
+    try:
+        sheet_df = pd.read_csv(SHEET_URL)
+        sheet_df.columns = sheet_df.columns.str.strip() # Clear whitespaces
+        
+        for idx, row in sheet_df.iterrows():
+            name_str = str(row.get('Name', '')).strip()
+            desc_str = str(row.get('Description', '')).strip()
+            
+            # Skip empty rows or duplicate presets
+            if not name_str or name_str in [o['name'] for o in preset_data]:
+                continue
+                
+            # Parse dates safely into python datetime.date format
+            try:
+                raw_deadline = pd.to_datetime(row.get('Deadline')).date()
+            except:
+                raw_deadline = datetime.date.today() + datetime.timedelta(days=30)
+            
+            # Map deliverables string into python lists safely
+            artifacts_str = row.get('Required Deliverables', 'TBD')
+            artifacts_list = [a.strip() for a in str(artifacts_str).split(',')] if pd.notna(artifacts_str) else ["TBD"]
+            
+            new_id = len(preset_data) + 1
+            preset_data.append({
+                "id": new_id,
+                "name": name_str,
+                "category": str(row.get('Category', 'Grant (Non-Dilutive)')),
+                "value": str(row.get('Value', 'TBD')),
+                "deadline": raw_deadline,
+                "description": desc_str,
+                "status": "Not Started",
+                "artifacts": artifacts_list,
+                "score": calculate_alignment_score(name_str, desc_str)
+            })
+    except Exception as e:
+        st.sidebar.error(f"Live Ingestion Offline: Verify sharing permissions. Error: {e}")
+
     st.session_state.opportunities = preset_data
 
 # ----------------------------------------------------
@@ -106,11 +149,11 @@ df = pd.DataFrame(st.session_state.opportunities)
 
 m1, m2, m3 = st.columns(3)
 m1.metric("Total Active Tracks", len(df))
-m2.metric("High Priority (>6 Score)", len(df[df['score'] >= 6]))
+m2.metric("High Priority (>=6 Score)", len(df[df['score'] >= 6]))
 m3.metric("Pending Nearest Deadline", str(df['deadline'].min()))
 
 # ----------------------------------------------------
-# 4. SIDEBAR: DATA COLLECTION PORTAL
+# 4. SIDEBAR: DATA COLLECTION PORTAL & MANUAL REFRESH
 # ----------------------------------------------------
 st.sidebar.header("📥 Ingest New Opportunity")
 with st.sidebar.form("ingest_form", clear_on_submit=True):
@@ -138,6 +181,12 @@ if submit_btn and new_name and new_desc:
     }
     st.session_state.opportunities.append(new_entry)
     st.sidebar.success(f"Opportunity Evaluated! Triage Score: {calc_score}/10")
+    st.rerun()
+
+# Hard-reset pipeline option for clearing out local memory cache
+if st.sidebar.button("🔄 Clear App Cache & Force Google Sheet Sync"):
+    del st.session_state.opportunities
+    st.rerun()
 
 # ----------------------------------------------------
 # 5. CORE PIPELINE VIEW
@@ -149,7 +198,7 @@ with col_f1:
 with col_f2:
     filter_status = st.multiselect("Filter by Pipeline Status", options=df['status'].unique(), default=df['status'].unique())
 
-filtered_df = df[(df['category'].isin(filter_cat)) & (df['status'].isin(filter_status))].sort_values(by="deadline")
+filtered_df = df[(df['category'].isin(filter_cat)) & (df['status'].isin(filter_status))].sort_values(by="score", ascending=False)
 
 for idx, row in filtered_df.iterrows():
     with st.container():
